@@ -38,6 +38,19 @@ const useThemeMusic = (appId: number) => {
         if (!newAudio?.audioUrl?.length) {
           return setAudio({ videoId: '', audioUrl: '' })
         }
+        // Mirror the manual-selection path (selectNewAudio in changePage): when
+        // downloads are enabled, also persist the auto-picked first result to
+        // disk. Without this, leaving the default pick only ever streamed it and
+        // nothing was downloaded.
+        if (settings.downloadAudio) {
+          await resolver.downloadAudio({
+            id: newAudio.videoId,
+            url: newAudio.audioUrl
+          })
+          if (ignore) {
+            return
+          }
+        }
         await updateCache(appId, newAudio)
         return setAudio(newAudio)
       }

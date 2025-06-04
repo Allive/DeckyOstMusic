@@ -25,5 +25,15 @@ export default [
     rules: {
       'react/react-in-jsx-scope': 'off'
     }
+  },
+  {
+    // Node scripts (deploy helpers) run outside the browser bundle.
+    files: ['scripts/**/*.{js,mjs,cjs}'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly'
+      }
+    }
   }
 ]

@@ -35,6 +35,17 @@ const useAudioPlayer = (
     if (audioUrl?.length) {
       audioPlayer.src = audioUrl
       audioPlayer.loop = true
+      // Reset readiness so the play effect re-fires once the new source has
+      // buffered. Without this, switching tracks (e.g. moving focus to another
+      // game on the home page) leaves isReady stuck at true and the new track
+      // never starts.
+      setIsReady(false)
+    } else {
+      // Focused game has no theme — stop and release the previous source so it
+      // doesn't keep playing over a game that should be silent.
+      stop()
+      audioPlayer.removeAttribute('src')
+      setIsReady(false)
     }
   }, [audioUrl])
 

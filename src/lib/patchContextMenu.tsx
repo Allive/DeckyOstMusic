@@ -3,7 +3,7 @@ import {
   afterPatch,
   fakeRenderComponent,
   findInReactTree,
-  findModuleChild,
+  findModuleByExport,
   MenuItem,
   Navigation,
   Patch
@@ -22,6 +22,24 @@ function ChangeMusicButton({ appId }: { appId: number }) {
       {t('changeThemeMusic')}...
     </MenuItem>
   )
+}
+
+/**
+ * Resolves the game's appid from the context-menu component.
+ * Older Steam clients exposed it on the owner fiber as
+ * `_owner.pendingProps.overview.appid`; newer clients (Oct 2025+) instead
+ * carry it as `app.appid` somewhere in the `props.children` tree. We try the
+ * legacy path first, then fall back to a tree search, so both keep working.
+ */
+const getAppId = (component: any): number | undefined => {
+  const legacy = component?._owner?.pendingProps?.overview?.appid
+  if (typeof legacy === 'number') return legacy
+
+  const foundApp = findInReactTree(
+    component?.props?.children,
+    (x: any) => typeof x?.app?.appid === 'number'
+  )
+  return foundApp?.app?.appid
 }
 
 // Always add before "Properties..."
@@ -59,7 +77,12 @@ const contextMenuPatch = (LibraryContextMenu: any) => {
     LibraryContextMenu.prototype,
     'render',
     (_: Record<string, unknown>[], component: any) => {
-      const appid: number = component._owner.pendingProps.overview.appid
+      const appid = getAppId(component)
+      // If we can't resolve the appid, leave the menu untouched rather than
+      // throwing — a throw here surfaces as a Decky error overlay.
+      if (typeof appid !== 'number') {
+        return component
+      }
 
       if (!patches.inner) {
         patches.inner = afterPatch(
@@ -109,25 +132,27 @@ const contextMenuPatch = (LibraryContextMenu: any) => {
 }
 
 /**
+ * Safely stringifies a webpack module export and checks for a substring.
+ * Steam's bundle contains exports (e.g. arrays holding Symbols) whose
+ * `.toString()` throws "Cannot convert a Symbol value to a string". An
+ * unguarded throw aborts the whole module scan and the plugin fails to load,
+ * so every stringify is wrapped in try/catch and skipped on failure.
+ */
+const exportIncludes = (e: any, needle: string): boolean => {
+  try {
+    return typeof e?.toString === 'function' && e.toString().includes(needle)
+  } catch {
+    return false
+  }
+}
+
+/**
  * Game context menu component.
  */
 export const LibraryContextMenu = fakeRenderComponent(
-  findModuleChild((m) => {
-    if (typeof m !== 'object') return
-    for (const prop in m) {
-      if (
-        m[prop]?.toString() &&
-        m[prop].toString().includes('().LibraryContextMenu')
-      ) {
-        return Object.values(m).find(
-          (sibling) =>
-            sibling?.toString().includes('createElement') &&
-            sibling?.toString().includes('navigator:')
-        )
-      }
-    }
-    return
-  })
+  Object.values(
+    findModuleByExport((e) => exportIncludes(e, '().LibraryContextMenu')) ?? {}
+  ).find((sibling) => exportIncludes(sibling, 'navigator:')) as any
 ).type
 
 export default contextMenuPatch

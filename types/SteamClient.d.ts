@@ -83,6 +83,27 @@ declare namespace appStore {
   function GetAppOverviewByGameID(appId: number): AppOverview
 }
 
+// Subset of the runtime AppOverview exposed by the Steam client that we use
+// for picking recently played / recently added games to preload.
+type SteamAppOverview = {
+  appid: number
+  display_name: string
+  app_type: number
+  // Unix seconds; 0 when never played / unknown.
+  rt_last_time_played: number
+  // Unix seconds the app was added to the library (purchased); 0 when unknown.
+  rt_purchase_time: number
+}
+
+type SteamCollection = {
+  allApps: SteamAppOverview[]
+}
+
+declare namespace collectionStore {
+  function GetCollection(id: string): SteamCollection | undefined
+  const allAppsCollection: SteamCollection
+}
+
 type RegisteredEvent = {
   unregister(): void
 }

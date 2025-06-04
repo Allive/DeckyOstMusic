@@ -17,6 +17,8 @@ class Plugin:
     yt_process: asyncio.subprocess.Process | None = None
     # We need this lock to make sure the process output isn't read by two concurrent readers at once.
     yt_process_lock = asyncio.Lock()
+    # Open file handle receiving the current yt-dlp process' stderr.
+    yt_stderr_file = None
     music_path = f"{decky.DECKY_PLUGIN_RUNTIME_DIR}/music"
     cache_path = f"{decky.DECKY_PLUGIN_RUNTIME_DIR}/cache"
     ssl_context = ssl.create_default_context(cafile=certifi.where())
@@ -38,6 +40,26 @@ class Plugin:
                 except TimeoutError:
                     # Otherwise, send SIGKILL.
                     self.yt_process.kill()
+        if self.yt_stderr_file is not None:
+            self.yt_stderr_file.close()
+            self.yt_stderr_file = None
+
+    @staticmethod
+    def _subprocess_env():
+        # Decky's plugin_loader is a PyInstaller-frozen binary that exports
+        # LD_LIBRARY_PATH pointing at its bundled (older) libs in /tmp/_MEI*.
+        # Child processes like yt-dlp then load that stale libcrypto.so.3
+        # instead of the system one, which breaks the system Python's _ssl
+        # module (OPENSSL_3.3.0 not found) and makes yt-dlp exit immediately.
+        # PyInstaller stashes the original value in LD_LIBRARY_PATH_ORIG, so
+        # restore it (or drop the var entirely) for our children.
+        env = dict(os.environ)
+        lp_orig = env.get("LD_LIBRARY_PATH_ORIG")
+        if lp_orig is not None:
+            env["LD_LIBRARY_PATH"] = lp_orig
+        else:
+            env.pop("LD_LIBRARY_PATH", None)
+        return env
 
     async def set_setting(self, key, value):
         self.settings.setSetting(key, value)
@@ -46,14 +68,24 @@ class Plugin:
         return self.settings.getSetting(key, default)
 
     async def search_yt(self, term: str):
+        decky.logger.info("search_yt: term=%r", term)
         # Add a check to make sure the process is still running before trying to terminate to avoid ProcessLookupError
         if self.yt_process is not None and self.yt_process.returncode is None:
             self.yt_process.terminate()
             # Wait for process to terminate.
             async with self.yt_process_lock:
                 await self.yt_process.communicate()
+        yt_dlp_path = f"{decky.DECKY_PLUGIN_DIR}/bin/yt-dlp"
+        # Capture yt-dlp's stderr to a file so failures inside the plugin's
+        # (systemd) environment are inspectable. Writing to a file avoids any
+        # risk of a stderr pipe filling up and deadlocking yt-dlp. Close any
+        # handle left over from a previous search to avoid leaking fds.
+        if self.yt_stderr_file is not None:
+            self.yt_stderr_file.close()
+        stderr_path = f"{decky.DECKY_PLUGIN_RUNTIME_DIR}/yt-dlp-stderr.log"
+        self.yt_stderr_file = open(stderr_path, "w")
         self.yt_process = await asyncio.create_subprocess_exec(
-            f"{decky.DECKY_PLUGIN_DIR}/bin/yt-dlp",
+            yt_dlp_path,
             f"ytsearch10:{term}",
             "-j",
             "-f",
@@ -61,28 +93,63 @@ class Plugin:
             "--match-filters",
             f"duration<?{20*60}",  # 20 minutes is too long.
             stdout=asyncio.subprocess.PIPE,
+            stderr=self.yt_stderr_file,
+            env=self._subprocess_env(),
             # The returned JSON can get rather big, so we set a generous limit of 10 MB.
             limit=10 * 1024**2,
+        )
+        decky.logger.info(
+            "search_yt: spawned %s (pid=%s), stderr -> %s",
+            yt_dlp_path,
+            self.yt_process.pid,
+            stderr_path,
         )
 
     async def next_yt_result(self):
         async with self.yt_process_lock:
-            if (
-                not self.yt_process
-                or not (output := self.yt_process.stdout)
-                or not (line := (await output.readline()).strip())
-            ):
+            if not self.yt_process or not (output := self.yt_process.stdout):
+                decky.logger.info("next_yt_result: no active process/stdout")
                 return None
-            entry = json.loads(line)
-            return self.entry_to_info(entry)
+            line = (await output.readline()).strip()
+            if not line:
+                decky.logger.info(
+                    "next_yt_result: empty line / EOF (returncode=%s)",
+                    self.yt_process.returncode,
+                )
+                return None
+            try:
+                entry = json.loads(line)
+            except Exception:
+                decky.logger.exception(
+                    "next_yt_result: failed to parse line: %r", line[:300]
+                )
+                return None
+            try:
+                info = self.entry_to_info(entry)
+            except Exception:
+                decky.logger.exception("next_yt_result: entry_to_info failed")
+                return None
+            decky.logger.info(
+                "next_yt_result: id=%s title=%r", info.get("id"), info.get("title")
+            )
+            return info
 
     @staticmethod
     def entry_to_info(entry):
+        # Newer yt-dlp builds don't always expose every key at the top level
+        # (e.g. "thumbnail" can be missing), so use .get() to avoid a KeyError
+        # that would abort the whole search and leave the UI list empty.
+        video_id = entry.get("id")
         return {
-            "url": entry["url"],
-            "title": entry["title"],
-            "id": entry["id"],
-            "thumbnail": entry["thumbnail"],
+            "url": entry.get("url"),
+            "title": entry.get("title") or video_id,
+            "id": video_id,
+            "thumbnail": entry.get("thumbnail")
+            or (
+                f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+                if video_id
+                else ""
+            ),
         }
 
     def local_match(self, id: str) -> str | None:
@@ -113,6 +180,7 @@ class Plugin:
             "-f",
             "bestaudio",
             stdout=asyncio.subprocess.PIPE,
+            env=self._subprocess_env(),
         )
         if (
             result.stdout is None
@@ -135,6 +203,7 @@ class Plugin:
             "%(id)s.%(ext)s",
             "-P",
             self.music_path,
+            env=self._subprocess_env(),
         )
         await process.communicate()
 

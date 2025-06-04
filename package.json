@@ -1,16 +1,29 @@
 {
-  "name": "sdh-gamethememusic",
-  "version": "1.7.0",
+  "name": "decky-ost-music",
+  "version": "1.8.0",
   "description": "Play theme songs on your game pages",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
     "watch": "rollup -c -w",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "setup": "pnpm i",
+    "update:ui": "pnpm update @decky/ui --latest",
+    "update:api": "pnpm update @decky/api --latest",
+    "update:rollup": "pnpm update @decky/rollup --latest",
+    "build:all": "pnpm i && pnpm run build",
+    "deck:folders": "node scripts/deck.mjs createfolders",
+    "deck:chmod": "node scripts/deck.mjs chmod",
+    "deploy": "node scripts/deck.mjs deploy",
+    "allinone": "pnpm run build:all && pnpm run deploy",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OMGDuke/SDH-GameThemeMusic.git"
+    "url": "git+https://github.com/Allive/DeckyOstMusic"
   },
   "keywords": [
     "decky",
@@ -19,17 +32,17 @@
     "steam-deck",
     "deck"
   ],
-  "author": "OMGDuke",
+  "author": "Allive",
   "license": "GPL-2.0-or-later",
   "bugs": {
-    "url": "https://github.com/OMGDuke/SDH-GameThemeMusic/issues"
+    "url": "https://github.com/Allive/DeckyOstMusic/issues"
   },
-  "homepage": "https://github.com/OMGDuke/SDH-GameThemeMusic#readme",
+  "homepage": "https://github.com/Allive/DeckyOstMusic#readme",
   "remote_binary": [
     {
       "name": "yt-dlp",
-      "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2024.11.18/yt-dlp",
-      "sha256hash": "78b4454c83d0f7efe9b26163e82bede0febf0039ae6bacf2963abcae941ac11a"
+      "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.06.09/yt-dlp",
+      "sha256hash": "e5d57466682cfa9d61e9cf7c8a4f09b00f4a62af37d3bbdc4bcffdf63615feac"
     }
   ],
   "devDependencies": {
@@ -61,6 +74,18 @@
       "ignoreMissing": [
         "react",
         "react-dom"
+      ]
+    },
+    "supportedArchitectures": {
+      "os": [
+        "current"
+      ],
+      "cpu": [
+        "current"
+      ],
+      "libc": [
+        "glibc",
+        "musl"
       ]
     }
   }

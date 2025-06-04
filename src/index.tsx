@@ -5,8 +5,10 @@ import { GiMusicalNotes } from 'react-icons/gi'
 
 import Settings from './components/settings'
 import patchLibraryApp from './lib/patchLibraryApp'
+import patchHomePage from './lib/patchHomePage'
 import patchContextMenu, { LibraryContextMenu } from './lib/patchContextMenu'
 import ChangeTheme from './components/changeTheme'
+import { runStartupPrefetch } from './actions/prefetch'
 import {
   AudioLoaderCompatState,
   AudioLoaderCompatStateContextProvider
@@ -17,6 +19,7 @@ import { name } from '@decky/manifest'
 export default definePlugin(() => {
   const state: AudioLoaderCompatState = new AudioLoaderCompatState()
   const libraryPatch = patchLibraryApp(state)
+  const homePatch = patchHomePage(state)
 
   routerHook.addRoute(
     '/gamethememusic/:appid',
@@ -33,6 +36,10 @@ export default definePlugin(() => {
   )
 
   const patchedMenu = patchContextMenu(LibraryContextMenu)
+
+  // Kick off background preloading of theme music for recently played / added
+  // games. Fire-and-forget so it never blocks plugin startup.
+  void runStartupPrefetch()
 
   const AppStateRegistrar =
     SteamClient.GameSessions.RegisterForAppLifetimeNotifications(
@@ -58,6 +65,7 @@ export default definePlugin(() => {
     onDismount() {
       AppStateRegistrar.unregister()
       routerHook.removePatch('/library/app/:appid', libraryPatch)
+      homePatch.unpatch()
       routerHook.removeRoute('/gamethememusic/:appid')
       patchedMenu?.unpatch()
     }

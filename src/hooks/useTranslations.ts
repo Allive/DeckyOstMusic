@@ -15,12 +15,15 @@ function useTranslations() {
     key: keyof (typeof languages)['en'],
     replacements: { [key: string]: string } = {}
   ): string {
-    let result
-    //
-    if (languages[lang]?.[key]?.length) {
-      result = languages[lang]?.[key]
-    } else if (languages.en?.[key]?.length) {
-      result = languages.en?.[key]
+    // A given key may be missing from a non-English locale (e.g. not yet
+    // translated on Crowdin), so treat the locale dictionary as partial and
+    // fall back to English, then to the key itself.
+    const dict = languages[lang] as Partial<(typeof languages)['en']>
+    let result: string
+    if (dict?.[key]?.length) {
+      result = dict[key] as string
+    } else if (languages.en[key]?.length) {
+      result = languages.en[key]
     } else {
       result = key
     }

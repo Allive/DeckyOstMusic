@@ -15,16 +15,17 @@ import {
   ToggleField
 } from '@decky/ui'
 import { useMemo } from 'react'
-import { SiCrowdin, SiDiscord, SiGithub, SiKofi } from "react-icons/si";
+import { SiDiscord, SiGithub } from 'react-icons/si'
 import { useSettings } from '../../hooks/useSettings'
 import useTranslations from '../../hooks/useTranslations'
 import {
   FaDownload,
+  FaHistory,
   FaUndo,
   FaSave,
   FaVolumeMute,
   FaVolumeUp,
-  FaYoutube,
+  FaYoutube
 } from 'react-icons/fa'
 import {
   clearCache,
@@ -46,6 +47,9 @@ export default function Index() {
     setDefaultMuted,
     setUseYtDlp,
     setDownloadAudio,
+    setPrefetchEnabled,
+    setPrefetchRecentlyPlayedCount,
+    setPrefetchRecentlyAddedCount,
     setInvidiousInstance,
     setVolume
   } = useSettings()
@@ -241,6 +245,50 @@ export default function Index() {
           ></ToggleField>
         </PanelSectionRow>
         <PanelSectionRow>
+          <ToggleField
+            icon={<FaHistory />}
+            checked={settings.prefetchEnabled}
+            disabled={!settings.useYtDlp}
+            label={t('prefetch')}
+            description={t('prefetchDescription')}
+            onChange={(newVal: boolean) => {
+              setPrefetchEnabled(newVal)
+            }}
+          ></ToggleField>
+        </PanelSectionRow>
+        {settings.useYtDlp && settings.prefetchEnabled && (
+          <>
+            <PanelSectionRow>
+              <SliderField
+                label={t('prefetchRecentlyPlayed')}
+                description={t('prefetchRecentlyPlayedDescription')}
+                value={settings.prefetchRecentlyPlayedCount}
+                onChange={(newVal: number) => {
+                  setPrefetchRecentlyPlayedCount(newVal)
+                }}
+                min={0}
+                max={50}
+                step={1}
+                editableValue
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <SliderField
+                label={t('prefetchRecentlyAdded')}
+                description={t('prefetchRecentlyAddedDescription')}
+                value={settings.prefetchRecentlyAddedCount}
+                onChange={(newVal: number) => {
+                  setPrefetchRecentlyAddedCount(newVal)
+                }}
+                min={0}
+                max={50}
+                step={1}
+                editableValue
+              />
+            </PanelSectionRow>
+          </>
+        )}
+        <PanelSectionRow>
           <ButtonItem
             label={t('deleteDownloadsLabel')}
             description={t('deleteDownloadsDescription')}
@@ -318,10 +366,18 @@ export default function Index() {
         </PanelSectionRow>
       </PanelSection>
       <PanelSection title={t('extras')}>
-        <PanelSocialButton icon={<SiKofi fill="#FF5E5B" />} url="https://ko-fi.com/OMGDuke">Ko-fi</PanelSocialButton>
-        <PanelSocialButton icon={<SiDiscord fill="#5865F2" />} url="https://deckbrew.xyz/discord">Discord</PanelSocialButton>
-        <PanelSocialButton icon={<SiGithub fill="#f5f5f5" />} url="https://github.com/OMGDuke/SDH-GameThemeMusic/">Github</PanelSocialButton>
-        <PanelSocialButton icon={<SiCrowdin fill="#FFFFFF" />} url="https://crowdin.com/project/sdh-gamethememusic">{t('helpTranslate')}</PanelSocialButton>
+        <PanelSocialButton
+          icon={<SiDiscord fill="#5865F2" />}
+          url="https://deckbrew.xyz/discord"
+        >
+          Discord
+        </PanelSocialButton>
+        <PanelSocialButton
+          icon={<SiGithub fill="#f5f5f5" />}
+          url="https://github.com/Allive/DeckyOstMusic/"
+        >
+          Github
+        </PanelSocialButton>
       </PanelSection>
     </div>
   )

@@ -1,4 +1,4 @@
-name: Build and Release Game Theme Music
+name: Build and Release DeckyOstMusic
 
 on:
   push:
@@ -40,14 +40,14 @@ jobs:
       - name: Build plugin
         run: |
           $(pwd)/cli/decky plugin build $(pwd)
-          unzip "out/Game Theme Music.zip" -d "out/Game Theme Music"
+          unzip "out/DeckyOstMusic.zip" -d "out/DeckyOstMusic"
 
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
-          name: SDH-GameThemeMusic
+          name: DeckyOstMusic
           path: |
-            ./out/Game Theme Music/*
+            ./out/DeckyOstMusic/*
 
   release:
     needs: build
@@ -58,17 +58,17 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: SDH-GameThemeMusic
-          path: SDH-GameThemeMusic
+          name: DeckyOstMusic
+          path: DeckyOstMusic
 
       - name: zip/tar release
         run: |
-          zip -r SDH-GameThemeMusic.zip SDH-GameThemeMusic/*
-          tar -czvf SDH-GameThemeMusic.tar.gz SDH-GameThemeMusic
+          zip -r DeckyOstMusic.zip DeckyOstMusic/*
+          tar -czvf DeckyOstMusic.tar.gz DeckyOstMusic
 
       - name: Create a release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: 'SDH-GameThemeMusic.zip,SDH-GameThemeMusic.tar.gz'
+          artifacts: 'DeckyOstMusic.zip,DeckyOstMusic.tar.gz'
           allowUpdates: true
           token: ${{ secrets.GITHUB_TOKEN }}

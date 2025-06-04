@@ -39,7 +39,7 @@ export default function NoMusic({
             alignItems: 'center'
           }}
         >
-          <FaVolumeMute size="md" />
+          <FaVolumeMute size={48} />
         </div>
         <p
           style={{

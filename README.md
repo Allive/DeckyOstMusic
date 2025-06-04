@@ -1,24 +1,36 @@
-# Game Theme Music
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/OMGDuke)
+# DeckyOstMusic
 
 [![Crowdin](https://badges.crowdin.net/sdh-gamethememusic/localized.svg)](https://crowdin.com/project/sdh-gamethememusic) [![Chat](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://deckbrew.xyz/discord)
 
 Play theme songs on your game pages. Compatible with the [AudioLoader](https://github.com/EMERALD0874/SDH-AudioLoader) plugin (AudioLoader version >= 1.5.0).
 
-![Game Theme Music](./assets/screenshot.jpg)
+![DeckyOstMusic](./assets/screenshot.jpg)
+
+## Fork & continuation
+
+DeckyOstMusic is a maintained fork and continuation of [**SDH-GameThemeMusic**](https://github.com/OMGDuke/SDH-GameThemeMusic) by **[OMGDuke](https://github.com/OMGDuke)** and its contributors. All credit for the original plugin, design and translations goes to them.
+
+The upstream project was archived as no longer maintained. This fork picks it back up: it restores compatibility with current Steam client builds and adds new features (see below). Maintained by [Allive](https://github.com/Allive) at [Allive/DeckyOstMusic](https://github.com/Allive/DeckyOstMusic).
 
 ## How it works
 
-This plugin will find a games theme music based on the games name and play it in the background. An internet connection is required. It also supports non steam games.
+This plugin will find a game's theme music based on the game's name and play it in the background. An internet connection is required. It also supports non-Steam games.
 
-The song that plays can be customised via the games context menu.
+The song that plays can be customised via the game's context menu.
 
 ![The song that plays can be customised via the games context menu.](./assets/screenshot2.jpg)
 
+## What's new in this fork
+
+- **Music on the home screen.** The theme of the game you have highlighted in the library home/carousel now starts playing, not only on the game's page. The track follows your selection as you browse, and is debounced so scrolling quickly through the library doesn't trigger music for every game you pass — it only plays once you settle on a game.
+- **Seamless playback across navigation.** Going from the home screen into a game's page and back no longer restarts the track: the same game's theme continues through a shared audio player.
+- **Background prefetch / downloads.** On startup the plugin can download themes for your recently played and recently added games so they're cached locally and play instantly (configurable counts in settings). Downloads require yt-dlp.
+- **Auto-download for the default pick.** Previously only a manually chosen track was downloaded; now the auto-selected first search result is downloaded too (when downloads are enabled), so leaving the default choice still caches a local copy.
+- **Restored compatibility.** Fixes for current Steam client builds so the plugin loads and the context-menu / app-page integration keeps working.
+
 ## Decky Loader
 
-This plugin requires [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader). Game Theme Music is available on the store.
+This plugin requires [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader). DeckyOstMusic is available on the store.
 
 ## Steam Deck Homebrew Discord
 
@@ -39,10 +51,6 @@ This plugin requires [Decky Loader](https://github.com/SteamDeckHomebrew/decky-l
 [Gardiner Bryant](https://youtu.be/uLpQbaRB9hc?t=447)
 
 [Midas Gamespace](https://youtu.be/Rc9DIhqxLnM?t=300)
-
-## Other Plugins
-
-Check out my other plugin [ProtonDB Badges ❤️](https://github.com/OMGDuke/protondb-decky)
 
 ## Localisation
 
