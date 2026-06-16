@@ -17,6 +17,7 @@ class ThemeAudioManager {
   private currentUrl = ''
   private refCount = 0
   private stopTimer: number | undefined
+  private suspended = false
   // Bridge the unmount→remount gap during navigation so audio isn't cut.
   private readonly stopDelayMs = 1500
 
@@ -58,9 +59,26 @@ class ThemeAudioManager {
       audio.src = url
       audio.loop = true
       audio.currentTime = 0
+      // Load the track but keep it paused while suspended; setSuspended(false)
+      // will resume it once no game is running.
+      if (!this.suspended) audio.play().catch(() => undefined)
+    } else if (audio.paused && !this.suspended) {
       audio.play().catch(() => undefined)
-    } else if (audio.paused) {
-      audio.play().catch(() => undefined)
+    }
+  }
+
+  /**
+   * Suspend playback while a game is running (it owns the audio) and resume the
+   * loaded track when no game remains. While suspended, play()/ensurePlaying()
+   * will not start the element, so the watchdog can't fight this state.
+   */
+  setSuspended(suspended: boolean) {
+    if (this.suspended === suspended) return
+    this.suspended = suspended
+    if (suspended) {
+      if (this.audio && !this.audio.paused) this.audio.pause()
+    } else if (this.audio && this.currentUrl && this.audio.paused) {
+      this.audio.play().catch(() => undefined)
     }
   }
 
@@ -76,6 +94,7 @@ class ThemeAudioManager {
    * still hold a currentUrl is always meant to be playing.
    */
   ensurePlaying() {
+    if (this.suspended) return
     if (this.audio && this.currentUrl && this.audio.paused) {
       this.audio.play().catch(() => undefined)
     }
@@ -130,7 +149,8 @@ export const useThemeVolume = (appId: number | undefined): number => {
  * also avoids cutting audio during the brief load on the next page.
  */
 export const useThemeAudio = (url: string | undefined, volume: number) => {
-  const { setOnThemePage } = useAudioLoaderCompatState()
+  const { setOnThemePage, gamesRunning } = useAudioLoaderCompatState()
+  const gameRunning = gamesRunning.length > 0
 
   useEffect(() => {
     themeAudio.acquire()
@@ -142,6 +162,12 @@ export const useThemeAudio = (url: string | undefined, volume: number) => {
       setOnThemePage(false)
     }
   }, [])
+
+  // A running game owns the audio: suspend the theme so they don't overlap when
+  // the user returns to the menu without quitting the game.
+  useEffect(() => {
+    themeAudio.setSuspended(gameRunning)
+  }, [gameRunning])
 
   useEffect(() => {
     if (url?.length) {
